@@ -250,7 +250,10 @@ class UID(nn.Module):
     loss_G_L1_BB = self.criterionL1(self.fake_BB_encoded, self.real_B_encoded) * 10
 
     # style losses (gram)
-    loss_G_style_B = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_recon)) * 1e5
+    loss_G_style_fake_B_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_encoded)) * 1e5
+    loss_G_style_fake_B_random = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_random)) * 1e5
+    loss_G_style_fake_BB_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_BB_encoded)) * 1e5
+    loss_G_style_fake_B_recon = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_recon)) * 1e5
     
     # perceptual losses
     # normalize = lambda input: util.normalize_batch(((input+1)*127.5).expand(-1,3,-1,-1))  # [-1,1] -> [0,255] -> [vgg normalized], [N,1,H,W]->[H,3,H,W]
@@ -263,8 +266,9 @@ class UID(nn.Module):
                   'loss_G_L1_I', 'loss_G_L1_B', \
                   'loss_kl_za_b', \
                   'percp_loss_B', 'percp_loss_I', \
-                  'loss_G_style_B', \
                   ]  # '', '', \
+                  # 'loss_G_style_fake_B_encoded', 'loss_G_style_fake_B_random', 'loss_G_style_fake_BB_encoded', 'loss_G_style_fake_B_recon', \
+
     loss_G = 0
     print_str_loss_G = 'loss_G: '
     for _loss_G_name in loss_G_list:
