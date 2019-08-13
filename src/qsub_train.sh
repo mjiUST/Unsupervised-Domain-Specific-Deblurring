@@ -8,7 +8,7 @@
         for fineSize in 256  # 2048 1024 512 256 128 
         do
             echo "start"
-            name=deblur-percep_styleB-"$loadSize"_"$fineSize"_"$resize_or_crop"
+            name=deblur-debug-"$loadSize"_"$fineSize"_"$resize_or_crop"  # percep_styleB
             python -u train-new_dataloader.py --dataroot $root --result_dir $root --display_dir $root \
                     --name $name \
                     --batch_size 2 --lambdaB 0.1 --lr 0.0002 --model_save_freq 500 --n_ep 1000 \

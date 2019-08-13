@@ -37,6 +37,8 @@ def main():
   print('\n--- train ---')
   max_it = 500000
   for ep in range(ep0, opts.n_ep):
+    print("Epoch: {}".format(ep))
+    model.enable_print()
     for it, data in enumerate(train_loader):
       images_a, images_b = data['A'], data['B']
       if images_a.size(0) != opts.batch_size or images_b.size(0) != opts.batch_size:
@@ -49,6 +51,7 @@ def main():
       if (it + 1) % 2 != 0 and it != len(train_loader)-1:
         continue
       model.update_EG()
+      model.disable_print()
 
       # save to display file
       if (it+1) % 48 == 0:

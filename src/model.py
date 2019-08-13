@@ -16,6 +16,7 @@ class UID(nn.Module):
     self.concat = opts.concat
     self.lambdaB = opts.lambdaB
     self.lambdaI = opts.lambdaI
+    self.silent_log = True
 
     # discriminators
     if opts.dis_scale > 1:
@@ -256,12 +257,28 @@ class UID(nn.Module):
     percp_loss_B = self.perceptualLoss.getloss(normalize(self.fake_I_encoded), normalize(self.real_B_encoded)) * self.lambdaB
     percp_loss_I = self.perceptualLoss.getloss(normalize(self.fake_B_encoded), normalize(self.real_I_encoded)) * self.lambdaI
 
-    loss_G = loss_G_GAN_I + loss_G_GAN_B + \
-             loss_G_L1_II + loss_G_L1_BB + \
-             loss_G_L1_I + loss_G_L1_B + \
-             loss_kl_za_b + percp_loss_B + \
-             loss_G_style_B + \
-             percp_loss_I
+    loss_G_list = [\
+                  'loss_G_GAN_I', 'loss_G_GAN_B', \
+                  'loss_G_L1_II', 'loss_G_L1_BB', \
+                  'loss_G_L1_I', 'loss_G_L1_B', \
+                  'loss_kl_za_b', \
+                  'percp_loss_B', 'percp_loss_I', \
+                  'loss_G_style_B', \
+                  ]  # '', '', \
+    loss_G = 0
+    print_str_loss_G = 'loss_G: '
+    for _loss_G_name in loss_G_list:
+        _loss_G = eval(_loss_G_name)
+        loss_G += _loss_G
+        print_str_loss_G += "{} {:0.3f}; \t".format(_loss_G_name, _loss_G)
+    if not self.silent_log:
+      print(print_str_loss_G)
+    # loss_G = loss_G_GAN_I + loss_G_GAN_B + \
+    #          loss_G_L1_II + loss_G_L1_BB + \
+    #          loss_G_L1_I + loss_G_L1_B + \
+    #          loss_kl_za_b + percp_loss_B + \
+    #          percp_loss_I
+            #  loss_G_style_B + \
 
     loss_G.backward(retain_graph=True)
 
@@ -384,3 +401,9 @@ class UID(nn.Module):
 
   def normalize_image(self, x):
     return x[:,0:3,:,:]
+
+  def enable_print(self):
+    self.silent_log = False
+
+  def disable_print(self):
+    self.silent_log = True
