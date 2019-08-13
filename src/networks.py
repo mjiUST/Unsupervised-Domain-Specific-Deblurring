@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torchvision.models as py_models
 import numpy
 import copy
+from vgg import Vgg16
 
 
 ####################################################################
@@ -261,7 +262,7 @@ class PerceptualLoss():
     def __init__(self, loss, gpu=0, p_layer=14):
         super(PerceptualLoss, self).__init__()
         self.criterion = loss
-        
+        self.device = torch.device('cuda') if gpu else torch.device('cpu')
         cnn = py_models.vgg19(pretrained=True).features
         cnn = cnn.cuda()
         model = nn.Sequential()
@@ -270,7 +271,8 @@ class PerceptualLoss():
             model.add_module(str(i),layer)
             if i == p_layer:
                 break
-        self.contentFunc = model     
+        self.contentFunc = model
+        self.styleFunc = Vgg16(requires_grad=False).to(self.device)     
 
     def getloss(self, fakeIm, realIm):
         if isinstance(fakeIm, numpy.ndarray):
@@ -281,6 +283,30 @@ class PerceptualLoss():
         f_real_no_grad = f_real.detach()
         loss = self.criterion(f_fake, f_real_no_grad)
         return loss
+    
+    def gram_matrix(self, y):
+        """ GitHub, pytorch/examples: examples/fast_neural_style/neural_style/utils.py """
+        (b, ch, h, w) = y.size()
+        features = y.view(b, ch, w * h)
+        features_t = features.transpose(1, 2)
+        gram = features.bmm(features_t) / (ch * h * w)
+        return gram
+
+    def getloss_gram(self, styleIm, xIm):
+        """
+        styleIm and xIm are normalized to [-1, 1] (around)
+        """
+        style_loss = 0
+        n_batch = len(xIm)
+        styleIm_no_grad = styleIm.detach()
+        gram_matrix_batch = [self.gram_matrix(y) for y in self.styleFunc(styleIm_no_grad)]  # relu1/2/3/4_3 layers embeddings
+
+        features_y = self.styleFunc(xIm)
+        for ft_y, gm_s in zip(features_y, gram_matrix_batch):
+            gm_y = self.gram_matrix(ft_y)
+            style_loss += torch.nn.MSELoss()(gm_y, gm_s[:n_batch, :, :])
+        return style_loss
+    
 class PerceptualLoss16():
     def __init__(self, loss, gpu=0, p_layer=14):
         super(PerceptualLoss16, self).__init__()

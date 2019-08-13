@@ -4,6 +4,8 @@ import torch.nn as nn
 import time
 
 
+normalize = lambda input: input.expand(-1,3,-1,-1)  # [N,1,H,W]->[H,3,H,W]
+
 class UID(nn.Module):
   def __init__(self, opts):
     super(UID, self).__init__()
@@ -199,8 +201,8 @@ class UID(nn.Module):
     pred_real = netD.forward(real)
     loss_D = 0
     for it, (out_a, out_b) in enumerate(zip(pred_fake, pred_real)):
-      out_fake = nn.functional.sigmoid(out_a)
-      out_real = nn.functional.sigmoid(out_b)
+      out_fake = torch.sigmoid(out_a)
+      out_real = torch.sigmoid(out_b)
       all0 = torch.zeros_like(out_fake).cuda(self.gpu)
       all1 = torch.ones_like(out_real).cuda(self.gpu)
       ad_fake_loss = nn.functional.binary_cross_entropy(out_fake, all0)
@@ -245,15 +247,20 @@ class UID(nn.Module):
     loss_G_L1_B = self.criterionL1(self.fake_B_recon, self.real_B_encoded) * 10
     loss_G_L1_II = self.criterionL1(self.fake_II_encoded, self.real_I_encoded) * 10
     loss_G_L1_BB = self.criterionL1(self.fake_BB_encoded, self.real_B_encoded) * 10
+
+    # style losses (gram)
+    loss_G_style_B = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_recon)) * 1e5
     
     # perceptual losses
-    percp_loss_B = self.perceptualLoss.getloss(self.fake_I_encoded, self.real_B_encoded) * self.lambdaB
-    percp_loss_I = self.perceptualLoss.getloss(self.fake_B_encoded, self.real_I_encoded) * self.lambdaI
+    # normalize = lambda input: util.normalize_batch(((input+1)*127.5).expand(-1,3,-1,-1))  # [-1,1] -> [0,255] -> [vgg normalized], [N,1,H,W]->[H,3,H,W]
+    percp_loss_B = self.perceptualLoss.getloss(normalize(self.fake_I_encoded), normalize(self.real_B_encoded)) * self.lambdaB
+    percp_loss_I = self.perceptualLoss.getloss(normalize(self.fake_B_encoded), normalize(self.real_I_encoded)) * self.lambdaI
 
     loss_G = loss_G_GAN_I + loss_G_GAN_B + \
              loss_G_L1_II + loss_G_L1_BB + \
              loss_G_L1_I + loss_G_L1_B + \
              loss_kl_za_b + percp_loss_B + \
+             loss_G_style_B + \
              percp_loss_I
 
     loss_G.backward(retain_graph=True)
@@ -274,7 +281,7 @@ class UID(nn.Module):
     outs_fake = netD.forward(fake)
     loss_G = 0
     for out_a in outs_fake:
-      outputs_fake = nn.functional.sigmoid(out_a)
+      outputs_fake = torch.sigmoid(out_a)
       all_ones = torch.ones_like(outputs_fake).cuda(self.gpu)
       loss_G += nn.functional.binary_cross_entropy(outputs_fake, all_ones)
     return loss_G
@@ -291,8 +298,8 @@ class UID(nn.Module):
       loss_z_L1_b = torch.mean(torch.abs(self.z_attr_random_b - self.z_random)) * 10
     
     # perceptual losses
-    percp_loss_B2 = self.perceptualLoss.getloss(self.fake_I_random, self.real_B_encoded) * self.lambdaB
-    percp_loss_I2 = self.perceptualLoss.getloss(self.fake_B_random, self.real_I_encoded) * self.lambdaI
+    percp_loss_B2 = self.perceptualLoss.getloss(normalize(self.fake_I_random), normalize(self.real_B_encoded)) * self.lambdaB
+    percp_loss_I2 = self.perceptualLoss.getloss(normalize(self.fake_B_random), normalize(self.real_I_encoded)) * self.lambdaI
 
 
     loss_G2 = loss_z_L1_b + loss_G_GAN2_I + loss_G_GAN2_B + percp_loss_B2 + percp_loss_I2
