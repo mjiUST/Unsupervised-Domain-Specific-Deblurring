@@ -56,6 +56,7 @@ class UID(nn.Module):
 
     # Setup the loss function for training
     self.criterionL1 = torch.nn.L1Loss()
+    self.criterionL2 = torch.nn.MSELoss()
     if opts.percep == 'default':
         self.perceptualLoss = networks.PerceptualLoss(nn.MSELoss(), opts.gpu, opts.percp_layer)
     elif opts.percep == 'face':
@@ -249,25 +250,37 @@ class UID(nn.Module):
     loss_G_L1_II = self.criterionL1(self.fake_II_encoded, self.real_I_encoded) * 10
     loss_G_L1_BB = self.criterionL1(self.fake_BB_encoded, self.real_B_encoded) * 10
 
+    # loss_
+    # percp_weight = 1.
+    # loss_G_percp_I = self.perceptualLoss.getloss(normalize(self.fake_I_recon), normalize(self.real_I_encoded)) * percp_weight
+    # loss_G_percp_B = self.perceptualLoss.getloss(normalize(self.fake_B_recon), normalize(self.real_B_encoded)) * percp_weight
+    # loss_G_percp_II = self.perceptualLoss.getloss(normalize(self.fake_II_encoded), normalize(self.real_I_encoded)) * percp_weight
+    # loss_G_percp_BB = self.perceptualLoss.getloss(normalize(self.fake_BB_encoded), normalize(self.real_B_encoded)) * percp_weight
+
+
     # style losses (gram)
-    loss_G_style_fake_B_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_encoded)) * 1e5
-    loss_G_style_fake_B_random = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_random)) * 1e5
-    loss_G_style_fake_BB_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_BB_encoded)) * 1e5
-    loss_G_style_fake_B_recon = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_recon)) * 1e5
+    # loss_G_style_fake_B_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_encoded)) * 1e5
+    # loss_G_style_fake_B_random = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_random)) * 1e5
+    # loss_G_style_fake_BB_encoded = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_BB_encoded)) * 1e5
+    # loss_G_style_fake_B_recon = self.perceptualLoss.getloss_gram(styleIm = normalize(self.real_B_encoded), xIm = normalize(self.fake_B_recon)) * 1e5
     
     # perceptual losses
     # normalize = lambda input: util.normalize_batch(((input+1)*127.5).expand(-1,3,-1,-1))  # [-1,1] -> [0,255] -> [vgg normalized], [N,1,H,W]->[H,3,H,W]
     percp_loss_B = self.perceptualLoss.getloss(normalize(self.fake_I_encoded), normalize(self.real_B_encoded)) * self.lambdaB
     percp_loss_I = self.perceptualLoss.getloss(normalize(self.fake_B_encoded), normalize(self.real_I_encoded)) * self.lambdaI
 
+    loss_L2_z_attr_b = self.criterionL2(self.z_attr_recon_b, self.z_attr_b)
+
     loss_G_list = [\
                   'loss_G_GAN_I', 'loss_G_GAN_B', \
-                  'loss_G_L1_II', 'loss_G_L1_BB', \
-                  'loss_G_L1_I', 'loss_G_L1_B', \
+                  'loss_G_L1_II', 'loss_G_L1_BB', 'loss_G_L1_I', 'loss_G_L1_B', \
                   'loss_kl_za_b', \
                   'percp_loss_B', 'percp_loss_I', \
                   ]  # '', '', \
                   # 'loss_G_style_fake_B_encoded', 'loss_G_style_fake_B_random', 'loss_G_style_fake_BB_encoded', 'loss_G_style_fake_B_recon', \
+                  # 'loss_L2_z_attr_b', \
+                  # 'loss_G_percp_II', 'loss_G_percp_BB', 'loss_G_percp_I', 'loss_G_percp_B', \
+
 
     loss_G = 0
     print_str_loss_G = 'loss_G: '
