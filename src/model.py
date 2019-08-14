@@ -13,6 +13,8 @@ class UID(nn.Module):
     # parameters
     lr = opts.lr
     self.nz = 8
+    lr_dcontent = lr / 2.5
+
     self.concat = opts.concat
     self.lambdaB = opts.lambdaB
     self.lambdaI = opts.lambdaI
@@ -29,7 +31,11 @@ class UID(nn.Module):
       self.disB = networks.Dis(opts.input_dim_b, norm=opts.dis_norm, sn=opts.dis_spectral_norm)
       self.disA2 = networks.Dis(opts.input_dim_a, norm=opts.dis_norm, sn=opts.dis_spectral_norm)
       self.disB2 = networks.Dis(opts.input_dim_b, norm=opts.dis_norm, sn=opts.dis_spectral_norm)
-        
+    
+    # discriminator for domain invariant content embedding
+    # self.disContent = networks.Dis(opts.input_dim_a, n_layer = 64, norm=opts.dis_norm, sn=opts.dis_spectral_norm)
+    self.disContent = networks.Dis_content()
+
     # encoders
     self.enc_c = networks.E_content(opts.input_dim_a, opts.input_dim_b)
     if self.concat:
@@ -49,6 +55,7 @@ class UID(nn.Module):
     self.disB_opt = torch.optim.Adam(self.disB.parameters(), lr=lr, betas=(0.5, 0.999), weight_decay=0.0001)
     self.disA2_opt = torch.optim.Adam(self.disA2.parameters(), lr=lr, betas=(0.5, 0.999), weight_decay=0.0001)
     self.disB2_opt = torch.optim.Adam(self.disB2.parameters(), lr=lr, betas=(0.5, 0.999), weight_decay=0.0001)
+    self.disContent_opt = torch.optim.Adam(self.disContent.parameters(), lr=lr_dcontent, betas=(0.5, 0.999), weight_decay=0.0001)
 
     self.enc_c_opt = torch.optim.Adam(self.enc_c.parameters(), lr=lr, betas=(0.5, 0.999), weight_decay=0.0001)
     self.enc_a_opt = torch.optim.Adam(self.enc_a.parameters(), lr=lr, betas=(0.5, 0.999), weight_decay=0.0001)
@@ -69,6 +76,7 @@ class UID(nn.Module):
     self.disB.apply(networks.gaussian_weights_init)
     self.disA2.apply(networks.gaussian_weights_init)
     self.disB2.apply(networks.gaussian_weights_init)
+    self.disContent.apply(networks.gaussian_weights_init)
     self.gen.apply(networks.gaussian_weights_init)
     self.enc_c.apply(networks.gaussian_weights_init)
     self.enc_a.apply(networks.gaussian_weights_init)
@@ -78,6 +86,7 @@ class UID(nn.Module):
     self.disB_sch = networks.get_scheduler(self.disB_opt, opts, last_ep)
     self.disA2_sch = networks.get_scheduler(self.disA2_opt, opts, last_ep)
     self.disB2_sch = networks.get_scheduler(self.disB2_opt, opts, last_ep)
+    self.disContent_sch = networks.get_scheduler(self.disContent_opt, opts, last_ep)
     self.enc_c_sch = networks.get_scheduler(self.enc_c_opt, opts, last_ep)
     self.enc_a_sch = networks.get_scheduler(self.enc_a_opt, opts, last_ep)
     self.gen_sch = networks.get_scheduler(self.gen_opt, opts, last_ep)
@@ -88,6 +97,7 @@ class UID(nn.Module):
     self.disB.cuda(self.gpu)
     self.disA2.cuda(self.gpu)
     self.disB2.cuda(self.gpu)
+    self.disContent.cuda(self.gpu)
     self.enc_c.cuda(self.gpu)
     self.enc_a.cuda(self.gpu)
     self.gen.cuda(self.gpu)
@@ -168,6 +178,23 @@ class UID(nn.Module):
     else:
       self.z_attr_random_i, self.z_attr_random_b = self.enc_a.forward(self.fake_B_random)
 
+  def forward_content(self):
+    half_size = 1
+    self.real_A_encoded = self.input_A[0:half_size]
+    self.real_B_encoded = self.input_B[0:half_size]
+    # get encoded z_c
+    self.z_content_a, self.z_content_b = self.enc_c.forward(self.real_A_encoded, self.real_B_encoded)
+
+  def update_D_content(self, image_a, image_b):
+    self.input_A = image_a
+    self.input_B = image_b
+    self.forward_content()
+    self.disContent_opt.zero_grad()
+    loss_D_Content = self.backward_contentD(self.z_content_a, self.z_content_b)
+    self.disContent_loss = loss_D_Content.item()
+    nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
+    self.disContent_opt.step()
+
 
   def update_D(self, image_a, image_b):
     self.input_I = image_a
@@ -198,6 +225,14 @@ class UID(nn.Module):
     self.disB2_loss = loss_D2_B.item()
     self.disB2_opt.step()
 
+    # # update disContent
+    self.disContent_opt.zero_grad()
+    loss_D_Content = self.backward_contentD(self.z_content_i, self.z_content_b)
+    # loss_D_Content = self.backward_D(self.disContent, self.z_content_i, self.z_content_b)
+    self.disContent_loss = loss_D_Content.item()
+    nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
+    self.disContent_opt.step()
+
   def backward_D(self, netD, real, fake):
     pred_fake = netD.forward(fake.detach())
     pred_real = netD.forward(real)
@@ -210,6 +245,20 @@ class UID(nn.Module):
       ad_fake_loss = nn.functional.binary_cross_entropy(out_fake, all0)
       ad_true_loss = nn.functional.binary_cross_entropy(out_real, all1)
       loss_D += ad_true_loss + ad_fake_loss
+    loss_D.backward()
+    return loss_D
+
+  def backward_contentD(self, imageA, imageB):
+    pred_fake = self.disContent.forward(imageA.detach())
+    pred_real = self.disContent.forward(imageB.detach())
+    for it, (out_a, out_b) in enumerate(zip(pred_fake, pred_real)):
+      out_fake = torch.sigmoid(out_a)
+      out_real = torch.sigmoid(out_b)
+      all1 = torch.ones((out_real.size(0))).cuda(self.gpu)
+      all0 = torch.zeros((out_fake.size(0))).cuda(self.gpu)
+      ad_true_loss = nn.functional.binary_cross_entropy(out_real, all1)
+      ad_fake_loss = nn.functional.binary_cross_entropy(out_fake, all0)
+    loss_D = ad_true_loss + ad_fake_loss
     loss_D.backward()
     return loss_D
 
@@ -232,6 +281,9 @@ class UID(nn.Module):
 
   def backward_EG(self):
 
+    # domain Ladv for generator
+    loss_G_GAN_IContent = self.backward_G_GAN_content(self.z_content_i)
+    loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b)
 
     # Ladv for generator
     loss_G_GAN_I = self.backward_G_GAN(self.fake_I_encoded, self.disA)
@@ -273,6 +325,7 @@ class UID(nn.Module):
 
     loss_G_list = [\
                   'loss_G_GAN_I', 'loss_G_GAN_B', \
+                  'loss_G_GAN_IContent', 'loss_G_GAN_BContent', \
                   'loss_G_L1_II', 'loss_G_L1_BB', 'loss_G_L1_I', 'loss_G_L1_B', \
                   'loss_kl_za_b', \
                   'percp_loss_B', 'percp_loss_I', \
@@ -311,6 +364,14 @@ class UID(nn.Module):
     self.G_loss = loss_G.item()
 
 
+  def backward_G_GAN_content(self, data):
+    outs = self.disContent.forward(data)
+    for out in outs:
+      outputs_fake = torch.sigmoid(out)
+      all_half = 0.5*torch.ones((outputs_fake.size(0))).cuda(self.gpu)
+      ad_loss = nn.functional.binary_cross_entropy(outputs_fake, all_half)
+    return ad_loss
+
   def backward_G_GAN(self, fake, netD=None):
     outs_fake = netD.forward(fake)
     loss_G = 0
@@ -346,6 +407,7 @@ class UID(nn.Module):
     self.disB_sch.step()
     self.disA2_sch.step()
     self.disB2_sch.step()
+    self.disContent_sch.step()
     self.enc_c_sch.step()
     self.enc_a_sch.step()
     self.gen_sch.step()
@@ -364,6 +426,7 @@ class UID(nn.Module):
       self.disA2.load_state_dict(checkpoint['disA2'])
       self.disB.load_state_dict(checkpoint['disB'])
       self.disB2.load_state_dict(checkpoint['disB2'])
+      self.disContent.load_state_dict(checkpoint['disContent'])
     self.enc_c.load_state_dict(checkpoint['enc_c'])
     self.enc_a.load_state_dict(checkpoint['enc_a'])
     self.gen.load_state_dict(checkpoint['gen'])
@@ -373,6 +436,7 @@ class UID(nn.Module):
       self.disA2_opt.load_state_dict(checkpoint['disA2_opt'])
       self.disB_opt.load_state_dict(checkpoint['disB_opt'])
       self.disB2_opt.load_state_dict(checkpoint['disB2_opt'])
+      self.disContent_opt.load_state_dict(checkpoint['disContent_opt'])
       self.enc_c_opt.load_state_dict(checkpoint['enc_c_opt'])
       self.enc_a_opt.load_state_dict(checkpoint['enc_a_opt'])
       self.gen_opt.load_state_dict(checkpoint['gen_opt'])
@@ -384,6 +448,7 @@ class UID(nn.Module):
              'disA2': self.disA2.state_dict(),
              'disB': self.disB.state_dict(),
              'disB2': self.disB2.state_dict(),
+             'disContent': self.disContent.state_dict(),
              'enc_c': self.enc_c.state_dict(),
              'enc_a': self.enc_a.state_dict(),
              'gen': self.gen.state_dict(),
@@ -391,6 +456,7 @@ class UID(nn.Module):
              'disA2_opt': self.disA2_opt.state_dict(),
              'disB_opt': self.disB_opt.state_dict(),
              'disB2_opt': self.disB2_opt.state_dict(),
+             'disContent_opt': self.disContent_opt.state_dict(),
              'enc_c_opt': self.enc_c_opt.state_dict(),
              'enc_a_opt': self.enc_a_opt.state_dict(),
              'gen_opt': self.gen_opt.state_dict(),

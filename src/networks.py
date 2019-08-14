@@ -17,6 +17,24 @@ class Dis_content(nn.Module):
   def __init__(self):
     super(Dis_content, self).__init__()
     model = []
+    model += [LeakyReLUConv2d(256, 256, kernel_size=7, stride=2, padding=1, norm='Instance')]
+    model += [LeakyReLUConv2d(256, 256, kernel_size=7, stride=2, padding=1, norm='Instance')]
+    model += [LeakyReLUConv2d(256, 256, kernel_size=7, stride=2, padding=1, norm='Instance')]
+    model += [LeakyReLUConv2d(256, 256, kernel_size=4, stride=1, padding=0)]
+    model += [nn.Conv2d(256, 1, kernel_size=1, stride=1, padding=0)]
+    self.model = nn.Sequential(*model)
+
+  def forward(self, x):
+    out = self.model(x)
+    out = out.view(-1)
+    outs = []
+    outs.append(out)
+    return outs
+
+class Dis_content(nn.Module):
+  def __init__(self):
+    super(Dis_content, self).__init__()
+    model = []
     model += [LeakyReLUConv2d(256, 256, kernel_size=4, stride=2, padding=1, norm='Instance')]
     model += [LeakyReLUConv2d(256, 256, kernel_size=4, stride=2, padding=1, norm='Instance')]
     model += [LeakyReLUConv2d(256, 256, kernel_size=4, stride=2, padding=1, norm='Instance')]
@@ -61,10 +79,9 @@ class MultiScaleDis(nn.Module):
     return outs
 
 class Dis(nn.Module):
-  def __init__(self, input_dim, norm='None', sn=False):
+  def __init__(self, input_dim, n_layer = 6, norm='None', sn=False):
     super(Dis, self).__init__()
     ch = 64
-    n_layer = 6
     self.model = self._make_net(ch, input_dim, n_layer, norm, sn)
 
   def _make_net(self, ch, input_dim, n_layer, norm, sn):
