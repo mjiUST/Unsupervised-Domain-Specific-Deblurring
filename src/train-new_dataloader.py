@@ -47,15 +47,12 @@ def main():
       images_b = images_b.cuda(opts.gpu).detach()
 
       # update model
-      # if (it + 1) % 2 != 0 and it != len(train_loader)-1:
-      #   continue
-      if (it + 1) % opts.d_iter != 0 and it < len(train_loader) - 2:
-        model.update_D_content(images_a, images_b)
+      model.update_D_content(images_a, images_b)
+      model.update_D(images_a, images_b)
+      if (it + 1) % 2 != 0 and it != len(train_loader)-1:
         continue
-      else:
-        model.update_D(images_a, images_b)
-        model.update_EG()
-        model.disable_print()
+      model.update_EG()
+      model.disable_print()
 
       # save to display file
       if (it+1) % 48 == 0:
