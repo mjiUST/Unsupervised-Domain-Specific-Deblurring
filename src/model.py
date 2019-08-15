@@ -180,20 +180,20 @@ class UID(nn.Module):
 
   def forward_content(self):
     half_size = 1
-    self.real_A_encoded = self.input_A[0:half_size]
+    self.real_A_encoded = self.input_I[0:half_size]
     self.real_B_encoded = self.input_B[0:half_size]
     # get encoded z_c
     self.z_content_a, self.z_content_b = self.enc_c.forward(self.real_A_encoded, self.real_B_encoded)
 
-  def update_D_content(self, image_a, image_b):
-    self.input_A = image_a
-    self.input_B = image_b
-    self.forward_content()
-    self.disContent_opt.zero_grad()
-    loss_D_Content = self.backward_contentD(self.z_content_a, self.z_content_b)
-    self.disContent_loss = loss_D_Content.item()
-    nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
-    self.disContent_opt.step()
+  # def update_D_content(self, image_a, image_b): # uncomment for GAN_content
+  #   self.input_I = image_a
+  #   self.input_B = image_b
+  #   self.forward_content()
+  #   self.disContent_opt.zero_grad()
+  #   loss_D_Content = self.backward_contentD(self.z_content_a, self.z_content_b)
+  #   self.disContent_loss = loss_D_Content.item()
+  #   nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
+  #   self.disContent_opt.step()
 
 
   def update_D(self, image_a, image_b):
@@ -225,13 +225,13 @@ class UID(nn.Module):
     self.disB2_loss = loss_D2_B.item()
     self.disB2_opt.step()
 
-    # # update disContent
-    self.disContent_opt.zero_grad()
-    loss_D_Content = self.backward_contentD(self.z_content_i, self.z_content_b)
-    # loss_D_Content = self.backward_D(self.disContent, self.z_content_i, self.z_content_b)
-    self.disContent_loss = loss_D_Content.item()
-    nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
-    self.disContent_opt.step()
+    # # # update disContent, # uncomment for GAN_content
+    # self.disContent_opt.zero_grad()
+    # loss_D_Content = self.backward_contentD(self.z_content_i, self.z_content_b)
+    # # loss_D_Content = self.backward_D(self.disContent, self.z_content_i, self.z_content_b)
+    # self.disContent_loss = loss_D_Content.item()
+    # nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
+    # self.disContent_opt.step()
 
   def backward_D(self, netD, real, fake):
     pred_fake = netD.forward(fake.detach())
@@ -249,8 +249,8 @@ class UID(nn.Module):
     return loss_D
 
   def backward_contentD(self, imageA, imageB):
-    pred_fake = self.disContent.forward(imageA.detach())
-    pred_real = self.disContent.forward(imageB.detach())
+    pred_fake = self.disContent.forward(imageA)  # GAN_Content: image.detach(). DANN: image
+    pred_real = self.disContent.forward(imageB)
     for it, (out_a, out_b) in enumerate(zip(pred_fake, pred_real)):
       out_fake = torch.sigmoid(out_a)
       out_real = torch.sigmoid(out_b)
@@ -259,7 +259,7 @@ class UID(nn.Module):
       ad_true_loss = nn.functional.binary_cross_entropy(out_real, all1)
       ad_fake_loss = nn.functional.binary_cross_entropy(out_fake, all0)
     loss_D = ad_true_loss + ad_fake_loss
-    loss_D.backward()
+    # loss_D.backward()  # uncomment for GAN_content. # only define loss here. do not rush to backward-prop before aggregate all losses
     return loss_D
 
   def update_EG(self):
@@ -267,10 +267,12 @@ class UID(nn.Module):
     self.enc_c_opt.zero_grad()
     self.enc_a_opt.zero_grad()
     self.gen_opt.zero_grad()
+    self.disContent_opt.zero_grad()
     self.backward_EG()
     self.enc_c_opt.step()
     self.enc_a_opt.step()
     self.gen_opt.step()
+    self.disContent_opt.step()
 
     # update G, Ec
     self.enc_c_opt.zero_grad()
@@ -281,9 +283,15 @@ class UID(nn.Module):
 
   def backward_EG(self):
 
-    # domain Ladv for generator
-    loss_G_GAN_IContent = self.backward_G_GAN_content(self.z_content_i) * 1.
-    loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b) * 1.
+    # # domain Ladv for generator
+    # loss_G_GAN_IContent = self.backward_G_GAN_content(self.z_content_i) * 1.
+    # loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b) * 1.
+    
+    # DANN (train together with G)
+    loss_DANN = self.backward_contentD(self.z_content_i, self.z_content_b)  # only define loss here. do not rush to backward-prop before aggregate all losses
+    self.DANN_loss = loss_DANN.item()
+    nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
+
 
     # Ladv for generator
     loss_G_GAN_I = self.backward_G_GAN(self.fake_I_encoded, self.disA)
@@ -325,13 +333,14 @@ class UID(nn.Module):
 
     loss_G_list = [\
                   'loss_G_GAN_I', 'loss_G_GAN_B', \
-                  'loss_G_GAN_IContent', 'loss_G_GAN_BContent', \
                   'loss_G_L1_II', 'loss_G_L1_BB', 'loss_G_L1_I', 'loss_G_L1_B', \
                   'loss_kl_za_b', \
+                  'loss_DANN', \
                   'percp_loss_B', 'percp_loss_I', \
                   ]  # '', '', \
                   # 'loss_G_style_fake_B_encoded', 'loss_G_style_fake_B_random', 'loss_G_style_fake_BB_encoded', 'loss_G_style_fake_B_recon', \
                   # 'loss_L2_z_attr_b', \
+                  # 'loss_G_GAN_IContent', 'loss_G_GAN_BContent', \
                   # 'loss_G_percp_II', 'loss_G_percp_BB', 'loss_G_percp_I', 'loss_G_percp_B', \
 
 
