@@ -1,14 +1,19 @@
+import time
 import torch
 from options import TrainOptions
 from dataset import dataset_unpair
 from model import UID
 from saver import Saver
 from data import CreateDataLoader
+from util.visualizer import Visualizer
 
 def main():
   # parse options
   parser = TrainOptions()
   opts = parser.parse()
+
+  # visualizer
+  visualizer = Visualizer(opts)
 
   # daita loader
   print('\n--- load dataset ---')
@@ -38,7 +43,7 @@ def main():
   max_it = 500000
   for ep in range(ep0, opts.n_ep):
     print("Epoch: {}".format(ep))
-    model.enable_print()
+
     for it, data in enumerate(train_loader):
       images_a, images_b = data['A'], data['B']
       if images_a.size(0) != opts.batch_size or images_b.size(0) != opts.batch_size:
@@ -52,7 +57,9 @@ def main():
       if (it + 1) % 2 != 0 and it != len(train_loader)-1:
         continue
       model.update_EG()
-      model.disable_print()
+
+      losses_dic = model.get_current_losses()
+      visualizer.plot_current_losses(ep, float(it)/len(train_loader), opts, losses_dic)
 
       # save to display file
       if (it+1) % 48 == 0:

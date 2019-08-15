@@ -53,6 +53,11 @@ class TrainOptions():
     self.parser.add_argument('--output_nc', type=int, default=1, help='# of output image channels')
     self.parser.add_argument('--max_dataset_size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset. If the dataset directory contains more than max_dataset_size, only a subset is loaded.')
 
+    ### visualizer
+    self.parser.add_argument('--display_id', type=int, default=1, help='window id of the web display')
+    self.parser.add_argument('--display_server', type=str, default="http://localhost", help='visdom server of the web display')
+    self.parser.add_argument('--display_env', type=str, default='main', help='visdom display environment name (default is "main")')
+    self.parser.add_argument('--display_port', type=int, default=8097, help='visdom port of the web display')
 
 
   def parse(self):

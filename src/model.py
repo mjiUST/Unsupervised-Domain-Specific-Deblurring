@@ -2,6 +2,7 @@ import networks
 import torch
 import torch.nn as nn
 import time
+from collections import OrderedDict
 
 
 normalize = lambda input: input.expand(-1,3,-1,-1)  # [N,1,H,W]->[H,3,H,W]
@@ -331,7 +332,7 @@ class UID(nn.Module):
 
     loss_L2_z_attr_b = self.criterionL2(self.z_attr_recon_b, self.z_attr_b)
 
-    loss_G_list = [\
+    self.loss_G_list = [\
                   'loss_G_GAN_I', 'loss_G_GAN_B', \
                   'loss_G_L1_II', 'loss_G_L1_BB', 'loss_G_L1_I', 'loss_G_L1_B', \
                   'loss_kl_za_b', \
@@ -343,13 +344,11 @@ class UID(nn.Module):
                   # 'loss_G_GAN_IContent', 'loss_G_GAN_BContent', \
                   # 'loss_G_percp_II', 'loss_G_percp_BB', 'loss_G_percp_I', 'loss_G_percp_B', \
 
-
     loss_G = 0
     print_str_loss_G = 'loss_G: '
-    for _loss_G_name in loss_G_list:
-        _loss_G = eval(_loss_G_name)
-        loss_G += _loss_G
-        print_str_loss_G += "{} {:0.3f}; \t".format(_loss_G_name, _loss_G)
+    for _loss_G_name in self.loss_G_list:
+        loss_G += eval(_loss_G_name)
+        # print_str_loss_G += "{} {:0.3f}; \t".format(_loss_G_name, _loss_G)
     if not self.silent_log:
       print(print_str_loss_G)
     # loss_G = loss_G_GAN_I + loss_G_GAN_B + \
@@ -499,3 +498,18 @@ class UID(nn.Module):
 
   def disable_print(self):
     self.silent_log = True
+
+  # return traning losses/errors. train.py will print out these errors as debugging information
+  def get_current_losses(self):
+      loss_names = [_loss_name for _loss_name in dir(self) if 'loss' in _loss_name]  # losses to be recorded, self.loss_G_list
+      errors_ret = OrderedDict()
+      for name in loss_names:
+          if isinstance(name, str):
+              # float(...) works for both scalar tensor and float number
+              try:
+                loss = float(getattr(self, name))
+              except:
+                continue
+              errors_ret[name] = loss
+      return errors_ret
+
