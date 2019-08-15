@@ -282,8 +282,8 @@ class UID(nn.Module):
   def backward_EG(self):
 
     # domain Ladv for generator
-    loss_G_GAN_IContent = self.backward_G_GAN_content(self.z_content_i)
-    loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b)
+    loss_G_GAN_IContent = self.backward_G_GAN_content(self.z_content_i) * 1.
+    loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b) * 1.
 
     # Ladv for generator
     loss_G_GAN_I = self.backward_G_GAN(self.fake_I_encoded, self.disA)

@@ -47,7 +47,7 @@ def main():
       images_b = images_b.cuda(opts.gpu).detach()
 
       # update model
-      model.update_D_content(images_a, images_b)
+      model.update_D_content(images_a, images_b)  # discriminator of z_content
       model.update_D(images_a, images_b)
       if (it + 1) % 2 != 0 and it != len(train_loader)-1:
         continue
