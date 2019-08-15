@@ -11,9 +11,10 @@
             for fineSize in 256  # 2048 1024 512 256 128 
             do
                 echo "start"
-                name=11.7-DANN_1.0-"$loadSize"_"$fineSize"_"$resize_or_crop"  # percep_styleB
+                name=12.1-DANN_1.0_grad_reverse-"$loadSize"_"$fineSize"_"$resize_or_crop"  # percep_styleB
                 python -u train-new_dataloader.py --dataroot $root --result_dir $root --display_dir $root \
                         --name $name \
+                        --display_id -1 \
                         --batch_size 2 --lambdaB 0.1 --lr 0.0002 --model_save_freq 500 --n_ep 1000 \
                         --loadSize $loadSize --fineSize $fineSize --resize_or_crop $resize_or_crop
                         # -m ipdb 
