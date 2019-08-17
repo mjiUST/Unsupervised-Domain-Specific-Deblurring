@@ -289,7 +289,7 @@ class UID(nn.Module):
     # loss_G_GAN_BContent = self.backward_G_GAN_content(self.z_content_b) * 1.
     
     # DANN (train together with G)
-    loss_DANN = self.backward_contentD(self.z_content_i, self.z_content_b)  # only define loss here. do not rush to backward-prop before aggregate all losses
+    loss_DANN = self.backward_contentD(self.z_content_i, self.z_content_b) * 1.0 # only define loss here. do not rush to backward-prop before aggregate all losses
     self.DANN_loss = loss_DANN.item()
     nn.utils.clip_grad_norm_(self.disContent.parameters(), 5)
 
