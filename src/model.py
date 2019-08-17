@@ -118,6 +118,11 @@ class UID(nn.Module):
     
     return output
 
+  def inference(self, image_a, image_b):
+    self.input_I = image_a
+    self.input_B = image_b
+    self.forward()
+
 
   def forward(self):
     # input images

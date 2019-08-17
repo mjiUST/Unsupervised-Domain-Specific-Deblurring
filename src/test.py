@@ -7,32 +7,38 @@ from dataset import dataset_single
 from model import UID
 from networks import PerceptualLoss16,PerceptualLoss
 from options import TestOptions
-from saver import save_imgs
+from saver import Saver, save_imgs
 from shutil import copyfile
 from skimage.measure import compare_psnr as PSNR
 from skimage.measure import compare_ssim as SSIM
 from skimage.io import imread
 from skimage.transform import resize
+from data import CreateDataLoader
+
+
 
 def main():
     
     # parse options
     parser = TestOptions()
     opts = parser.parse()
-    result_dir = os.path.join(opts.result_dir, opts.name)
+    result_dir = os.path.join(opts.result_dir, opts.name, 'test')
     orig_dir = opts.orig_dir
     blur_dir = opts.dataroot
 
     if not os.path.exists(result_dir):
-        os.mkdir(result_dir)
+        os.makedirs(result_dir)
+
+    saver = Saver(opts)
 
     # data loader
     print('\n--- load dataset ---')
-    if opts.a2b:
-        dataset = dataset_single(opts, 'A', opts.input_dim_a)
-    else:
-        dataset = dataset_single(opts, 'B', opts.input_dim_b)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=opts.nThreads)
+    dataset_domain = 'A' if opts.a2b else 'B'
+    #     dataset = dataset_single(opts, 'A', opts.input_dim_a)
+    # else:
+    #     dataset = dataset_single(opts, 'B', opts.input_dim_b)
+    # loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=opts.nThreads)
+    loader = CreateDataLoader(opts)
 
     # model
     print('\n--- load model ---')
@@ -43,62 +49,25 @@ def main():
 
     # test
     print('\n--- testing ---')
-    for idx1, (img1,img_name) in enumerate(loader):
+    for idx1, data in enumerate(loader):
+        # img1, img_name_list = data[dataset_domain], data[dataset_domain+'_paths']
+        # img1 = img1.cuda(opts.gpu).detach()
+        images_a, images_b = data['A'], data['B']
+        img_name_list = data['A_paths']
+        if len(img_name_list) > 1:
+            print("Warning, there are more than 1 sample in the test batch.")
+        images_a = images_a.cuda(opts.gpu).detach()
+        images_b = images_b.cuda(opts.gpu).detach()
+        images_a = torch.cat([images_a]*2, dim=0)  # because half of the batch is used as real_A_random
+        images_b = torch.cat([images_b]*2, dim=0)  # because half of the batch is used as real_B_random
         print('{}/{}'.format(idx1, len(loader)))
-        img1 = img1.cuda(opts.gpu).detach()
         with torch.no_grad():
-            img = model.test_forward(img1, a2b=opts.a2b)
-        img_name = img_name[0].split('/')
-        img_name = img_name[-1]
-        save_imgs(img, img_name, result_dir)
-  
-     # evaluate metrics
-    if opts.percep == 'default':
-        pLoss = PerceptualLoss(nn.MSELoss(),p_layer=36)
-    elif opts.percep == 'face':
-        self.perceptualLoss = networks.PerceptualLoss16(nn.MSELoss(),p_layer=30)
-    else:
-        self.perceptualLoss = networks.MultiPerceptualLoss(nn.MSELoss())
-    
-    orig_list = sorted(os.listdir(orig_dir))
-    deblur_list = sorted(os.listdir(result_dir)) 
-    blur_list = sorted(os.listdir(blur_dir)) 
-    
-    psnr = []
-    ssim = []
-    percp = []
-    blur_psnr = []
-    blur_ssim = []
-    blur_percp = []
+            model.inference(images_a, images_b)
+            # img = model.test_forward(img1, a2b=opts.a2b)
+        saver.write_img(idx1, model, filename=os.path.basename(img_name_list[0]))
+        # for _img, _img_name in zip(img, img_name_list):
+        #     save_imgs(img, _img_name.split('/')[-1], result_dir)
 
-    for (deblur_img_name, orig_img_name, blur_img_name) in zip(deblur_list, orig_list, blur_list):
-        deblur_img_name = os.path.join(result_dir,deblur_img_name)
-        orig_img_name = os.path.join(orig_dir,orig_img_name)
-        blur_img_name = os.path.join(blur_dir, blur_img_name)
-        deblur_img = imread(deblur_img_name)
-        orig_img = imread(orig_img_name)
-        blur_img = imread(blur_img_name)
-        try:
-            psnr.append(PSNR(deblur_img, orig_img))
-            ssim.append(SSIM(deblur_img, orig_img, multichannel=True))
-            blur_psnr.append(PSNR(blur_img, orig_img))
-            blur_ssim.append(SSIM(blur_img, orig_img, multichannel=True))
-        except ValueError:
-            print(orig_img_name)
-        
-        with torch.no_grad():
-            temp = pLoss.getloss(deblur_img,orig_img)
-            temp2 = pLoss.getloss(blur_img,orig_img)
-        percp.append(temp)
-        blur_percp.append(temp2)
-        
-    print(sum(psnr)/len(psnr))
-    print(sum(ssim)/len(ssim))
-    print(sum(percp)/len(percp))
-    
-    print(sum(blur_psnr)/len(psnr))
-    print(sum(blur_ssim)/len(ssim))
-    print(sum(blur_percp)/len(percp))
     return
 
 if __name__ == '__main__':

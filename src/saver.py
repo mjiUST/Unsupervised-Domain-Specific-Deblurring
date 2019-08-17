@@ -17,7 +17,9 @@ def save_imgs(imgs, names, path, yuv=False):
         os.mkdir(path)
     img = tensor2img(imgs)
     img = Image.fromarray(img)
-    img.save(os.path.join(path, names))
+    img_path = os.path.join(path, names)
+    img.save(img_path)
+    print('Saved: ' + img_path)
 
 class Saver():
   def __init__(self, opts):
