@@ -53,7 +53,7 @@ def main():
         # img1, img_name_list = data[dataset_domain], data[dataset_domain+'_paths']
         # img1 = img1.cuda(opts.gpu).detach()
         images_a, images_b = data['A'], data['B']
-        img_name_list = data['A_paths']
+        img_name_list = data['B_paths']
         if len(img_name_list) > 1:
             print("Warning, there are more than 1 sample in the test batch.")
         images_a = images_a.cuda(opts.gpu).detach()
@@ -64,12 +64,11 @@ def main():
         with torch.no_grad():
             model.inference(images_a, images_b)
             # img = model.test_forward(img1, a2b=opts.a2b)
-        saver.write_img(idx1, model)
+        img_name = img_name_list[0].split('/')[-1]
+        saver.write_img(idx1, model, img_name=img_name)
         saver.save_img(img=model.fake_I_encoded, 
-                       name='gen_%05d.png' % (idx1),
-                       subfolder_name="fake_A")
-        # for _img, _img_name in zip(img, img_name_list):
-        #     save_imgs(img, _img_name.split('/')[-1], result_dir)
+                       img_name=img_name,
+                       subfolder_name="fake_A") #'gen_%05d.png' % (idx1),
 
     return
 

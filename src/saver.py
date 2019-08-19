@@ -37,15 +37,16 @@ class Saver():
       os.makedirs(self.image_dir)
 
   # save result images
-  def write_img(self, ep, model):
+  def write_img(self, ep, model, img_name=None):
     if (ep + 1) % self.img_save_freq == 0:
         assembled_images = model.assemble_outputs()
-        img_filename = '%s/gen_%05d.png' % (self.image_dir, ep)
+        img_name = 'gen_%05d.png' % (ep) if img_name is None else img_name
+        img_filename = '%s/%s' % (self.image_dir, img_name)
         torchvision.utils.save_image(assembled_images / 2 + 0.5, img_filename, nrow=1)
-    elif ep == -1:
-        assembled_images = model.assemble_outputs()
-        img_filename = '%s/gen_last.png' % (self.image_dir, ep)
-        torchvision.utils.save_image(assembled_images / 2 + 0.5, img_filename, nrow=1)
+    # elif ep == -1:
+    #     assembled_images = model.assemble_outputs()
+    #     img_filename = '%s/gen_last.png' % (self.image_dir, ep)
+    #     torchvision.utils.save_image(assembled_images / 2 + 0.5, img_filename, nrow=1)
     print("Saved to: " + img_filename)
 
   # save model
@@ -57,12 +58,12 @@ class Saver():
       model.save('%s/last.pth' % self.model_dir, ep, total_it)
 
   # save a set of images
-  def save_img(self, img, name, subfolder_name="fake_A", yuv=False):
+  def save_img(self, img, img_name, subfolder_name="fake_A", yuv=False):
       path = os.path.join(self.image_dir, '..', subfolder_name)
       if not os.path.exists(path):
           os.mkdir(path)
       img = tensor2img(img)
       img = Image.fromarray(img)
-      img_path = os.path.join(path, name)
+      img_path = os.path.join(path, img_name)
       img.save(img_path)
       print('Saved: ' + img_path)
