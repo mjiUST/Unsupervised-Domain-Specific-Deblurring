@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import visdom
 import ntpath
 import time
 from . import util
@@ -43,24 +44,31 @@ class Visualizer():
     def __init__(self, opt):
         self.display_id = opt.display_id
         self.use_html = opt.isTrain and not opt.no_html
-        self.win_size = opt.display_winsize
+        self.win_size = 256  # opt.display_winsize
         self.name = opt.name
         self.opt = opt
         self.saved = False
+
+        log_dir = os.path.join(opt.result_dir, opt.name, 'log')
+        util.mkdirs(log_dir)
+        self.log_file = os.path.join(log_dir, 'loss_log.txt')
+
         if self.display_id > 0:
-            import visdom
-            self.ncols = opt.display_ncols
+            self.ncols = 5 # opt.display_ncols
             self.vis = visdom.Visdom(server=opt.display_server, port=opt.display_port, env=opt.display_env, raise_exceptions=True)
+            ## vis.replay_log('/tmp/test_to_and_from_log') # can replay an existing log file.  # https://github.com/facebookresearch/visdom/pull/589
+        else: # visdom offline mode
+            self.vis = visdom.Visdom(log_to_filename=self.log_file, offline=True)  # https://github.com/facebookresearch/visdom/pull/589
 
         if self.use_html:
             self.web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
             self.img_dir = os.path.join(self.web_dir, 'images')
             print('create web directory %s...' % self.web_dir)
             util.mkdirs([self.web_dir, self.img_dir])
-        self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
-        with open(self.log_name, "a") as log_file:
-            now = time.strftime("%c")
-            log_file.write('================ Training Loss (%s) ================\n' % now)
+
+        # with open(self.log_file, "a") as log_file:
+        #     now = time.strftime("%c")
+        #     log_file.write('================ Training Loss (%s) ================\n' % now)
 
     def reset(self):
         self.saved = False

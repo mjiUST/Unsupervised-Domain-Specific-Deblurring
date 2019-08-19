@@ -77,3 +77,14 @@ def normalize_batch(batch):
     batch = batch.div_(255.0)
     return (batch - mean) / std
 
+def return_center_crop_slices(input_shapes=(10,12), output_shapes=(8,6), input_scale=1.0, output_scale=1.0):
+    """
+    scale the input, then center crop the scaled output_shapes. Return the slice in order to get the desired crop.
+    Example: `[np.s_[:]]*2 + center_crop_slices` -> [:,:, output_shapes]  
+    """
+    center_crop_slices = []
+    for _i, _o in zip(input_shapes, output_shapes):
+        _i *= input_scale
+        _o *= output_scale
+        center_crop_slices.append(np.s_[(_i-_o)//2 : (_i-_o)//2+_o])
+    return center_crop_slices
