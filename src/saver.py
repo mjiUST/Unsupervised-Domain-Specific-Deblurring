@@ -46,6 +46,7 @@ class Saver():
         assembled_images = model.assemble_outputs()
         img_filename = '%s/gen_last.png' % (self.image_dir, ep)
         torchvision.utils.save_image(assembled_images / 2 + 0.5, img_filename, nrow=1)
+    print("Saved to: " + img_filename)
 
   # save model
   def write_model(self, ep, total_it, model):

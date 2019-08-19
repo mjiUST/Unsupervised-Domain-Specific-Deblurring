@@ -15,11 +15,11 @@ def main():
   # visualizer
   visualizer = Visualizer(opts)
 
-  # daita loader
+  # data loader
   print('\n--- load dataset ---')
   # dataset = dataset_unpair(opts)    
   # train_loader = torch.utils.data.DataLoader(dataset, batch_size=opts.batch_size, shuffle=True, num_workers=opts.nThreads)
-  train_loader = CreateDataLoader(opts)
+  data_loader = CreateDataLoader(opts)
 
   # model
   print('\n--- load model ---')
@@ -44,7 +44,7 @@ def main():
   for ep in range(ep0, opts.n_ep):
     print("Epoch: {}".format(ep))
 
-    for it, data in enumerate(train_loader):
+    for it, data in enumerate(data_loader):
       images_a, images_b = data['A'], data['B']
       if images_a.size(0) != opts.batch_size or images_b.size(0) != opts.batch_size:
         continue
@@ -54,12 +54,12 @@ def main():
       # update model
       # model.update_D_content(images_a, images_b)  # uncomment for GAN_content, discriminator of z_content
       model.update_D(images_a, images_b)
-      if (it + 1) % 2 != 0 and it != len(train_loader)-1:
+      if (it + 1) % 2 != 0 and it != len(data_loader)-1:
         continue
       model.update_EG()
 
       losses_dic = model.get_current_losses()
-      visualizer.plot_current_losses(ep, float(it)/len(train_loader), opts, losses_dic)
+      visualizer.plot_current_losses(ep, float(it)/len(data_loader), opts, losses_dic)
 
       # save to display file
       if (it+1) % 48 == 0:
@@ -67,7 +67,7 @@ def main():
         print('Dis_I_loss: %04f, Dis_B_loss %04f, GAN_loss_I %04f, GAN_loss_B %04f' % (model.disA_loss, model.disB_loss, model.gan_loss_i,model.gan_loss_b))
         print('B_percp_loss %04f, Recon_II_loss %04f' % (model.B_percp_loss, model.l1_recon_II_loss))
       if (it+1) % 200 == 0:
-        saver.write_img(ep*len(train_loader) + (it+1), model)
+        saver.write_img(ep*len(data_loader) + (it+1), model)
         
       total_it += 1
       if total_it >= max_it:
