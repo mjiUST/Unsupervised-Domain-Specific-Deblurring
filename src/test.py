@@ -14,7 +14,7 @@ from skimage.measure import compare_ssim as SSIM
 from skimage.io import imread
 from skimage.transform import resize
 from data import CreateDataLoader
-
+from util.util import return_center_crop_slices
 
 
 def main():
@@ -53,7 +53,8 @@ def main():
         # img1, img_name_list = data[dataset_domain], data[dataset_domain+'_paths']
         # img1 = img1.cuda(opts.gpu).detach()
         images_a, images_b = data['A'], data['B']
-        img_name_list = data['B_paths']
+        img_name_list = data['B_paths']  # B is the fluorescence image
+        center_crop_shape = data['B_size']  # B is the fluorescence image
         if len(img_name_list) > 1:
             print("Warning, there are more than 1 sample in the test batch.")
         images_a = images_a.cuda(opts.gpu).detach()
@@ -66,7 +67,10 @@ def main():
             # img = model.test_forward(img1, a2b=opts.a2b)
         img_name = img_name_list[0].split('/')[-1]
         saver.write_img(idx1, model, img_name=img_name)
-        saver.save_img(img=model.fake_I_encoded, 
+        saver.save_img(img=model.fake_I_encoded[[np.s_[:]]*2 + return_center_crop_slices(input_shapes=images_b.shape[-2:], 
+                                                                                         output_shapes=center_crop_shape, 
+                                                                                         input_scale=1.0, 
+                                                                                         output_scale=opts.fineSize*1.0/opts.loadSize)], 
                        img_name=img_name,
                        subfolder_name="fake_A") #'gen_%05d.png' % (idx1),
 

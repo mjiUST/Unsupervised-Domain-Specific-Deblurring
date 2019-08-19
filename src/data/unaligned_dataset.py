@@ -34,6 +34,8 @@ class UnalignedDataset(BaseDataset):
         B_path = self.B_paths[index_B]
         A_img = Image.open(A_path).convert('RGB')
         B_img = Image.open(B_path).convert('RGB')
+        A_size = A_img.size
+        B_size = B_img.size
 
         A = self.transform(A_img)
         B = self.transform(B_img)
@@ -52,7 +54,8 @@ class UnalignedDataset(BaseDataset):
             tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
             B = tmp.unsqueeze(0)
         return {'A': A, 'B': B,
-                'A_paths': A_path, 'B_paths': B_path}
+                'A_paths': A_path, 'B_paths': B_path,
+                'A_size': A_size, 'B_size': B_size}
 
     def __len__(self):
         return max(self.A_size, self.B_size)
