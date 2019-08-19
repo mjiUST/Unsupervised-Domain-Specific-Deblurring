@@ -105,6 +105,7 @@ class TestOptions():
     ### dataloader (copy from Cycle_GAN)
     self.parser.add_argument('--isTrain', action='store_true')
     self.parser.add_argument('--dataset_mode', type=str, default='unaligned', help='chooses how datasets are loaded. [unaligned | aligned | single]')
+    self.parser.add_argument('--disable_data_aug', action='store_true', help='if true, do not randomly crop / affine / flip')
     self.parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop|none]')
     self.parser.add_argument('--loadSize', type=int, default=286, help='scale images to this size')
     self.parser.add_argument('--fineSize', type=int, default=256, help='then crop to this size')
