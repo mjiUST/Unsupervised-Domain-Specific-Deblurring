@@ -37,9 +37,9 @@ class Saver():
       os.makedirs(self.image_dir)
 
   # save result images
-  def write_img(self, ep, model, img_name=None):
+  def write_img(self, ep, model, img_name=None, inference_mode=False):
     if (ep + 1) % self.img_save_freq == 0:
-        assembled_images = model.assemble_outputs()
+        assembled_images = model.assemble_outputs(inference_mode)
         img_name = 'gen_%05d.png' % (ep) if img_name is None else img_name
         img_filename = '%s/%s' % (self.image_dir, img_name)
         torchvision.utils.save_image(assembled_images / 2 + 0.5, img_filename, nrow=1)
