@@ -65,6 +65,9 @@ def main():
             model.inference(images_a, images_b)
             # img = model.test_forward(img1, a2b=opts.a2b)
         saver.write_img(idx1, model)
+        saver.save_img(img=model.fake_I_encoded, 
+                       name='gen_%05d.png' % (idx1),
+                       subfolder_name="fake_A")
         # for _img, _img_name in zip(img, img_name_list):
         #     save_imgs(img, _img_name.split('/')[-1], result_dir)
 

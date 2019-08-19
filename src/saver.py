@@ -56,3 +56,13 @@ class Saver():
     elif ep == -1:
       model.save('%s/last.pth' % self.model_dir, ep, total_it)
 
+  # save a set of images
+  def save_img(self, img, name, subfolder_name="fake_A", yuv=False):
+      path = os.path.join(self.image_dir, '..', subfolder_name)
+      if not os.path.exists(path):
+          os.mkdir(path)
+      img = tensor2img(img)
+      img = Image.fromarray(img)
+      img_path = os.path.join(path, name)
+      img.save(img_path)
+      print('Saved: ' + img_path)
