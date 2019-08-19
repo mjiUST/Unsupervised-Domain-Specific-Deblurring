@@ -28,7 +28,7 @@
                             --batch_size 1 \
                             --loadSize $loadSize --fineSize $fineSize --resize_or_crop $resize_or_crop
                             # -m ipdb 
-                            # --num_threads 0 --nThreads 0\
+                            # --num_threads 0 --nThreads 0\  # can use pdb to debug
                             # --display_dir "$root"/test/"$model_of_epoch"
                 done
             done

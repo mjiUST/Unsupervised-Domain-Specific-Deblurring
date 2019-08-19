@@ -480,7 +480,10 @@ class UID(nn.Module):
     torch.save(state, filename)
     return
 
-  def assemble_outputs(self):
+  def assemble_outputs(self, inference_mode=False):
+    """
+    inference_mode: only show [real_B, fake_I, B_recon]
+    """
     images_a = self.normalize_image(self.real_I_encoded).detach()
     images_b = self.normalize_image(self.real_B_encoded).detach()
     images_a1 = self.normalize_image(self.fake_I_encoded).detach()
@@ -491,6 +494,8 @@ class UID(nn.Module):
     images_b2 = self.normalize_image(self.fake_B_random).detach()
     images_b3 = self.normalize_image(self.fake_B_recon).detach()
     images_b4 = self.normalize_image(self.fake_BB_encoded).detach()
+    if inference_mode:
+      return torch.cat((images_b[0:1, ::], images_a1[0:1, ::], images_b3[0:1, ::]),3)
     row1 = torch.cat((images_a[0:1, ::], images_b1[0:1, ::], images_b2[0:1, ::], images_a4[0:1, ::], images_a3[0:1, ::]),3)
     row2 = torch.cat((images_b[0:1, ::], images_a1[0:1, ::], images_a2[0:1, ::], images_b4[0:1, ::], images_b3[0:1, ::]),3)
     return torch.cat((row1,row2),2)

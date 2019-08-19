@@ -66,7 +66,7 @@ def main():
             model.inference(images_a, images_b)
             # img = model.test_forward(img1, a2b=opts.a2b)
         img_name = img_name_list[0].split('/')[-1]
-        saver.write_img(idx1, model, img_name=img_name)
+        saver.write_img(idx1, model, img_name=img_name, inference_mode=True)
         saver.save_img(img=model.fake_I_encoded[[np.s_[:]]*2 + return_center_crop_slices(input_shapes=images_b.shape[-2:], 
                                                                                          output_shapes=center_crop_shape, 
                                                                                          input_scale=1.0, 
