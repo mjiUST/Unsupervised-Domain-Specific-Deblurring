@@ -18,6 +18,7 @@
                         --batch_size 2 --lambdaB 0.1 --lr 0.0002 --model_save_freq 1 --n_ep 500 \
                         --loadSize $loadSize --fineSize $fineSize --resize_or_crop $resize_or_crop
                         # -m ipdb 
+                        # --serial_batches \  # do not randomly select samples when load data. (use during inference)
             done
         done
     done

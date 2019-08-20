@@ -26,9 +26,11 @@
                             --name $name \
                             --resume "$root"/"$method_folder"/"$model_of_epoch".pth \
                             --batch_size 1 \
+                            --serial_batches \
                             --loadSize $loadSize --fineSize $fineSize --resize_or_crop $resize_or_crop
                             # -m ipdb 
                             # --num_threads 0 --nThreads 0\  # can use pdb to debug
+                            # --serial_batches \  # do not randomly select samples when load data.
                             # --display_dir "$root"/test/"$model_of_epoch"
                 done
             done
