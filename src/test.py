@@ -54,7 +54,7 @@ def main():
         # img1 = img1.cuda(opts.gpu).detach()
         images_a, images_b = data['A'], data['B']
         img_name_list = data['B_paths']  # B is the fluorescence image
-        center_crop_shape = data['B_size']  # B is the fluorescence image
+        center_crop_shape = data['B_size_WH'][::-1]  # B is the fluorescence image
         if len(img_name_list) > 1:
             print("Warning, there are more than 1 sample in the test batch.")
         images_a = images_a.cuda(opts.gpu).detach()
