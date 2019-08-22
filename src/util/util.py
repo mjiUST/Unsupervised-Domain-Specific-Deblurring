@@ -84,7 +84,7 @@ def return_center_crop_slices(input_shapes=(10,12), output_shapes=(8,6), input_s
     """
     center_crop_slices = []
     for _i, _o in zip(input_shapes, output_shapes):
-        _i *= input_scale
-        _o *= output_scale
-        center_crop_slices.append(np.s_[(_i-_o)//2 : (_i-_o)//2+_o])
+        _ii = int(int(_i) * input_scale)
+        _oo = int(int(_o) * output_scale)
+        center_crop_slices.append(np.s_[(_ii-_oo)//2 : (_ii-_oo)//2+_oo])
     return center_crop_slices
