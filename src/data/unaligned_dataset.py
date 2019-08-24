@@ -1,6 +1,6 @@
 import os.path
 from data.base_dataset import BaseDataset, get_transform
-from data.image_folder import make_dataset
+from data.image_folder import make_dataset, default_loader
 from PIL import Image
 import random
 
@@ -32,8 +32,9 @@ class UnalignedDataset(BaseDataset):
         else:
             index_B = random.randint(0, self.B_size - 1)
         B_path = self.B_paths[index_B]
-        A_img = Image.open(A_path).convert('RGB')
-        B_img = Image.open(B_path).convert('RGB')
+
+        A_img = default_loader(A_path, self.opt.preproc)
+        B_img = default_loader(B_path, self.opt.preproc)
         A_size_WH = A_img.size
         B_size_WH = B_img.size
 

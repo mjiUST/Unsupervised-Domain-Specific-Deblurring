@@ -3,7 +3,7 @@ import random
 import torchvision.transforms as transforms
 import torch
 from data.base_dataset import BaseDataset
-from data.image_folder import make_dataset
+from data.image_folder import make_dataset, default_loader
 from PIL import Image
 
 
@@ -21,7 +21,7 @@ class AlignedDataset(BaseDataset):
 
     def __getitem__(self, index):
         AB_path = self.AB_paths[index]
-        AB = Image.open(AB_path).convert('RGB')
+        AB = default_loader(AB_path)
         w, h = AB.size
         assert(self.opt.loadSize >= self.opt.fineSize)
         w2 = int(w / 2)

@@ -75,6 +75,7 @@ class TestOptions():
     # data loader related
     self.parser.add_argument('--dataroot', type=str, required=True, help='path of data')
     self.parser.add_argument('--phase', type=str, default='test', help='phase for dataloading')
+    self.parser.add_argument('--preproc', type=str, default='None', help='preprocessing methods: None, suppress_half')
     self.parser.add_argument('--resize_size', type=int, default=256, help='resized image size for training')
     self.parser.add_argument('--crop_size', type=int, default=128, help='cropped image size for training')
     self.parser.add_argument('--nThreads', type=int, default=4, help='for data loader')

@@ -8,35 +8,40 @@
     ## dataset: "test_xxx_loadSize_fineSize"
     ##          "test_gut_select_1024_256" / "test_gut_full_1024_256"
     ##          "test_angiography_1024_1024" / "test_angiography_full_1024_1024"
-    dataset="test_gut_select_1024_256"  # path: root/method_folder/dataset_loadsize_finesize
+    ##          "test_angiography_1024_1024-enhance"
+    dataset="test_angiography_full_1024_1024"  # path: root/method_folder/dataset_loadsize_finesize
     resize_or_crop="crop_and_scale"  #'scale_width_and_crop'  # "none" 'resize_and_crop' 'crop' 'scale_width' 'scale_width_and_crop' 'crop_and_scale' 'crop_and_rotate_and_scale'
+    preproc="suppress_half"
     ## brain: 00121 00191 00198 00233 00349 00360 00369 00420 00421   
     ## gut: 00237 00243 00246 00247 00248 00251 00282 00306 00326 00354 00360 00361 00370 00376 00382 00422 00425 00427 00436 00448 00473
     ## gut 13.1.3_1024_256: 00068 00074 00083 00086 00097 00100 00107 00111 00119 00121 00122 00127 00130 00134 00136 00144 00149 00162 00163 00170 00173 00177 00178 00180 00183 00192 00194 00201 00202 00215 00219 00220 00221 00223 00225 00230 00233 00234 00244 00249 00251 00253 00258 00261 00267 00268 00272 00281 00291 00296 00298 00303 00304 00306 00307 00318  00319 00325 00326 00327 00330 00333 00336 00337 
-    for model_of_epoch in 00068 00074 00083 00086 00097 00100 00107 00111 00119 00121 00122 00127 00130 00134 00136 00144 00149 00162 00163 00170 00173 00177 00178 00180 00183 00192 00194 00201 00202 00215 00219 00220 00221 00223 00225 00230 00233 00234 00244 00249 00251 00253 00258 00261 00267 00268 00272 00281 00291 00296 00298 00303 00304 00306 00307 00318  00319 00325 00326 00327 00330 00333 00336 00337   # {00000..00500}  {260..400..30}  # {10..300..10} # {7000..40000..500}   # 0: latest
+    for model_of_epoch in 00119   # {00000..00500}  {260..400..30}  # {10..300..10} # {7000..40000..500}   # 0: latest
     do
         for root in $root_gut  # $root_gut $root_brain
         do
             ## gut: loadSize/fineSize 3072/768
             ## angiography: loadSize/fineSize 1024/1024
-            for loadSize in 3072 #1024 512  # 3072 2048 1888 1024 512 256 128
+            for loadSize in 1024 #1024 512  # 3072 2048 1888 1024 512 256 128
             do
-                for fineSize in 768  # 2048 1024 768 512 256 128 
+                for fineSize in 1024  # 2048 1024 768 512 256 128 
                 do
                     echo "start"
                     sleep 1
-                    name=$model_of_epoch  # 12.1-DANN_1.0_grad_reverse-"$loadSize"_"$fineSize"_"$resize_or_crop"  # percep_styleB
+                    name=$model_of_epoch$preproc  # 12.1-DANN_1.0_grad_reverse-"$loadSize"_"$fineSize"_"$resize_or_crop"  # percep_styleB
                     # NOTE: if dataroot is set to result_dir, remember to copy testA/B to the result_dir
                     result_dir=$root/$method_folder/"$dataset"
+                    dataset_dir="$result_dir"
                     python -u \
-                            test.py --dataroot "$result_dir" --result_dir $result_dir \
+                            test.py --dataroot $dataset_dir --result_dir $result_dir \
                             --name $name \
                             --resume "$root"/"$method_folder"/"$model_of_epoch".pth \
                             --batch_size 1 \
                             --serial_batches \
+                            --preproc $preproc\
                             --loadSize $loadSize --fineSize $fineSize --resize_or_crop $resize_or_crop
                             # -m ipdb 
                             # --num_threads 0 --nThreads 0\  # can use pdb to debug
+                            # --preproc suppress_half\  # None, suppress_half
                             # --serial_batches \  # do not randomly select samples when load data.
                             # --display_dir "$root"/test/"$model_of_epoch"
                 done

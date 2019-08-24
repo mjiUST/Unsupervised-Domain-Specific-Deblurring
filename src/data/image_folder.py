@@ -9,6 +9,7 @@ import torch.utils.data as data
 
 from PIL import Image
 import os
+import numpy as np
 import os.path
 
 IMG_EXTENSIONS = [
@@ -34,9 +35,30 @@ def make_dataset(dir):
 
     return images
 
+def suppress_half_to_0(array_u8):
+    """
+    增强angiography对比度: [median, 255] -> [0, 255]
+    """
+    value_to_0 = np.median(array_u8)
+    array2_u8 = ((array_u8 - value_to_0) * 255.0 / (255-value_to_0))
+    array2_u8[array2_u8<0] = 0
+    array2_u8 = array2_u8.astype(np.uint8)
+    return array2_u8
 
-def default_loader(path):
-    return Image.open(path).convert('RGB')
+def default_loader(path, preproc='None'):
+    """
+    preproc: 
+        None: load as RGB
+        suppress_half: suppress half of the pixel: map [median, 255] to [0, 255]
+    """
+    im_pil = Image.open(path).convert('RGB')
+    if 'None' in preproc:
+        im_out = im_pil
+    elif 'suppress_half' in preproc:
+        im_out = Image.fromarray(suppress_half_to_0(np.array(im_pil)))
+    else:
+        raise Warning("Do not know this img_loader_func: " + preproc)
+    return im_out
 
 
 class ImageFolder(data.Dataset):
