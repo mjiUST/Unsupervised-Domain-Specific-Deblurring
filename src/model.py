@@ -104,7 +104,7 @@ class UID(nn.Module):
     self.gen.cuda(self.gpu)
 
   def get_z_random(self, batchSize, nz, random_type='gauss'):
-    z = torch.randn(batchSize, nz).cuda(self.gpu)
+    z = torch.randn(batchSize, nz).cuda(self.gpu)  # comment cudaxxx for cpu mode
     return z
 
   def test_forward(self, image, a2b=True):

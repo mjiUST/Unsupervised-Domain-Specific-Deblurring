@@ -43,7 +43,7 @@ def main():
     # model
     print('\n--- load model ---')
     model = UID(opts)
-    model.setgpu(opts.gpu)
+    model.setgpu(opts.gpu)  ## comment for cpu mode
     model.resume(opts.resume, train=False)
     model.eval()
 
@@ -57,8 +57,8 @@ def main():
         center_crop_shape = data['B_size_WH'][::-1]  # B is the fluorescence image
         if len(img_name_list) > 1:
             print("Warning, there are more than 1 sample in the test batch.")
-        images_a = images_a.cuda(opts.gpu).detach()
-        images_b = images_b.cuda(opts.gpu).detach()
+        images_a = images_a.cuda(opts.gpu).detach()  ## comment for cpu mode
+        images_b = images_b.cuda(opts.gpu).detach()  ## comment for cpu mode
         images_a = torch.cat([images_a]*2, dim=0)  # because half of the batch is used as real_A_random
         images_b = torch.cat([images_b]*2, dim=0)  # because half of the batch is used as real_B_random
         print('{}/{}'.format(idx1, len(loader)))
